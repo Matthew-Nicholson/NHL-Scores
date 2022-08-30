@@ -27,6 +27,7 @@
 </template>
 
 <script setup>
+// TODO: App is working as expected. Time to get electron involved.
 import { ref, reactive, computed } from 'vue';
 import { useSocketIO } from './scripts/socketio.service';
 import NhlGame from './components/NhlGame.vue';
