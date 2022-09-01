@@ -1,5 +1,5 @@
 <template>
-  <div class="flex shadow unselectable">
+  <div class="flex shadow unselectable bg-white normalize-width">
     <img
       :src="logos[props.game.homeTeam]"
       :alt="props.game.homeTeam"
@@ -42,12 +42,12 @@ const startTime = computed(() => {
   position: relative;
   justify-content: space-between;
   align-items: center;
-  width: 169px;
   height: 65px;
   border-radius: 24px;
   padding-left: 2px;
   padding-right: 2px;
   white-space: nowrap;
+  /* background-color: transparent; */
 }
 .shadow {
   /* box-shadow: rgba(0, 0, 0, 0.08) 0px 4px 12px; */
