@@ -4,6 +4,7 @@
       :src="logos[props.game.homeTeam]"
       :alt="props.game.homeTeam"
       class="logo"
+      draggable="false"
     />
     <span class="text-bold"
       >{{ props.game.homeScore }} - {{ props.game.awayScore }}</span
@@ -12,6 +13,7 @@
       :src="logos[props.game.awayTeam]"
       :alt="props.game.awayTeam"
       class="logo"
+      draggable="false"
     />
     <div class="bottom-center">
       <span v-if="props.game.finished" class="uppercase">Final</span>
@@ -58,7 +60,7 @@ const startTime = computed(() => {
   text-transform: uppercase;
 }
 .logo {
-  aspect-ratio: 1/1;
+  aspect-ratio: 1/1; /* Experimental but works with Electron */
   max-height: 100%;
   max-width: 100%;
   border-radius: 50%;

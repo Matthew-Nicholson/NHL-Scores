@@ -1,20 +1,20 @@
 <template>
-  <div ref="wrapper" class="wrapper" id="wrapper">
-    <div
-      class="centered shadow no-games column normalize-width bg-white draggable rounded"
-      v-if="!games.length"
-    >
+  <div
+    @click="contextMenu.show = false"
+    @contextmenu="showContextMenu"
+    @mousedown="onMouseDown"
+    ref="wrapper"
+    class="wrapper bg-transparent unselectable"
+    id="wrapper"
+  >
+    <div class="shadow no-games normalize-width bg-white" v-if="!games.length">
       <p class="nowrap" v-show="!demoMode">No games today.</p>
-      <button
-        v-if="!demoMode"
-        class="underlined no-drag"
-        @click="demoMode = true"
-      >
+      <button v-if="!demoMode" class="underlined" @click="demoMode = true">
         Demo mode
       </button>
       <button
         v-else
-        class="underlined no-drag"
+        class="underlined"
         @click="
           demoMode = false;
           featured = null;
@@ -24,11 +24,7 @@
       </button>
     </div>
     <TransitionGroup ref="list" class="list" name="list" tag="ul">
-      <li
-        v-for="(game, index) in displayGames"
-        :key="index"
-        class="list-item bg-transparent"
-      >
+      <li v-for="(game, index) in displayGames" :key="index" class="list-item">
         <NhlGame
           :game="game"
           @dblclick="setFeatured(index)"
@@ -36,26 +32,22 @@
         />
       </li>
     </TransitionGroup>
+    <ContextMenu
+      v-if="contextMenu.show"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      @close="closeApp"
+    />
   </div>
 </template>
 
 <script setup>
-// TODO: App is working as expected. Time to get electron involved.
-import {
-  ref,
-  reactive,
-  computed,
-  nextTick,
-  onUpdated,
-  onMounted,
-  watch,
-} from 'vue';
-// import { ipcRenderer } from 'electron';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useSocketIO } from './scripts/socketio.service';
 import NhlGame from './components/NhlGame.vue';
+import ContextMenu from './components/ContextMenu.vue';
 // === DEMO ===
 import demoGames from './scripts/demoGames';
-
 const demoMode = ref(true);
 // === DEMO ===
 
@@ -89,54 +81,87 @@ const wrapper = ref(null);
 onMounted(() => {
   const sizeObserver = new ResizeObserver((data) => {
     const height = data[0].contentRect.height;
-    const width = data[0].contentRect.width;
-    console.log('Height:', height, 'Width:', width);
-    // TODO: Emit a resize event for electron to work with.
+    const width = data[0].contentRect.width + 4; // Adding +4 prevents app from ever having width of 0, which causes a crash.
+    window.ipc.send('resize', { height: height, width: width });
   });
   sizeObserver.observe(wrapper.value);
 });
+
+// Context menu
+const contextMenu = reactive({
+  show: false,
+  x: 0,
+  y: 0,
+});
+const showContextMenu = (e) => {
+  e.preventDefault();
+  contextMenu.x = e.clientX;
+  contextMenu.y = e.clientY;
+  return (contextMenu.show = true);
+};
+const closeApp = () => {
+  return window.ipc.send('close');
+};
+
+// Drag
+const animationId = ref(null);
+const mouseX = ref(null);
+const mouseY = ref(null);
+
+function onMouseDown(e) {
+  mouseX.value = e.clientX;
+  mouseY.value = e.clientY;
+  document.addEventListener('mouseup', onMouseUp);
+  requestAnimationFrame(moveWindow);
+}
+function onMouseUp(e) {
+  document.removeEventListener('mouseup', onMouseUp);
+  cancelAnimationFrame(animationId.value);
+}
+function moveWindow() {
+  window.ipc.send('windowMoving', {
+    mouseX: mouseX.value,
+    mouseY: mouseY.value,
+  });
+  animationId.value = requestAnimationFrame(moveWindow);
+}
 </script>
 
 <style>
 body,
 html {
-  margin: 0;
+  margin: 0; /* Otherwise app sometimes has width of 0. Idk. */
   padding: 0;
-  box-sizing: border-box;
-  max-width: min-content !important;
+  font-family: Avenir, Helvetica, Arial, sans-serif;
+  color: #212f3e;
+  overflow: hidden; /* Electron likes to randomly add a pixel here or there. Probably a rounding issue. */
+  max-width: min-content; /* We send this width to electron, so this is important.*/
   max-height: min-content;
-  /* background-color: red; */
+}
+.wrapper {
+  padding: 2px; /* So our box shadow isn't cut off*/
+}
+::-webkit-scrollbar {
+  display: none; /* This isn't doing anything but might be necessary on small screens*/
 }
 button {
   all: unset;
   cursor: pointer;
   padding: 8px;
 }
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: #212f3e;
-  box-sizing: border-box;
-  max-width: min-content;
-}
-.draggable {
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-app-region: drag;
-}
-.no-drag {
-  -webkit-app-region: no-drag !important;
-}
+
 .bg-white {
   background-color: white;
 }
 .no-games {
+  align-items: center;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   padding: 2px;
 }
-.rounded {
-  border-radius: 12px;
-}
+
 .bg-transparent {
   background-color: transparent;
 }
@@ -151,14 +176,7 @@ button {
 .nowrap {
   white-space: nowrap;
 }
-.centered {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.column {
-  flex-direction: column;
-}
+
 .underlined {
   text-decoration: underline;
   color: rgb(13, 13, 33);
@@ -167,15 +185,18 @@ button {
   list-style-type: none;
   width: min-content;
   padding: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
 }
 .list-item {
   margin-bottom: 12px;
   cursor: pointer;
 }
-.list-move, /* apply transition to moving elements */
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.3s ease;
+.list-item:last-child {
+  margin-bottom: 0;
+}
+.list-move {
+  transition: all 0.42s ease-in-out;
 }
 .normalize-width {
   width: 169px;
