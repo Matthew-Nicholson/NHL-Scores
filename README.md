@@ -18,9 +18,9 @@ To build for production:
 ```npm run electron:build```
 
 ### Using NHL-Scores
-Click and drag to move the app around the window.
-App can be closed from the taskbar, or right click and close.
-Double click a game to focus on that game and hide the rest.
+* Click and drag to move the app around the window.
+* App can be closed from the taskbar, or right click and close.
+* Double click a game to focus on that game and hide the rest.
 
 ### Contact
 matthewn1991@gmail.com
